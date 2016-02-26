@@ -51,14 +51,13 @@ LOG = logging.getLogger(__name__)
 class MonitorHandler(object):
 
     NAMESPACES = [
-        'nova.compute.monitors.cpu',
+        'nova.compute.monitors',
     ]
 
     def __init__(self, resource_tracker):
-        # Dictionary keyed by the monitor type namespace. Value is the
-        # first loaded monitor of that namespace or False.
-        self.type_monitor_loaded = {ns: False for ns in self.NAMESPACES}
-
+        # translates 'virt_driver' and 'cpu.virt_driver' to 'cpu' for backwards compatibility
+        self.conf_monitors = [x if 'virt_driver' not in x else 'cpu' for x in CONF.compute_monitors]
+        self.type_monitor_loaded = {}
         self.monitors = []
         for ns in self.NAMESPACES:
             plugin_mgr = enabled.EnabledExtensionManager(
@@ -79,35 +78,26 @@ class MonitorHandler(object):
         ept_parts = ept.split(':')
         namespace_parts = ept_parts[0].split('.')
         namespace = '.'.join(namespace_parts[0:-1])
-        if self.type_monitor_loaded[namespace] is not False:
-            LOG.warning(_LW("Excluding %(namespace)s monitor "
-                            "%(monitor_name)s. Already loaded "
-                            "%(loaded_monitor)s."),
-                        {'namespace': namespace,
-                         'monitor_name': ext.name,
-                         'loaded_monitor': self.type_monitor_loaded[namespace]
-                        })
+        monitor_type = namespace_parts[-2]
+        if self.type_monitor_loaded.get(namespace, False) is not False:
+            msg = _LW("Excluding %(namespace)s monitor %(monitor_name)s. "
+                      "Already loaded %(loaded_monitor)s.")
+            msg = msg % {
+                'namespace': namespace,
+                'monitor_name': ext.name,
+                'loaded_monitor': self.type_monitor_loaded[namespace]
+            }
+            LOG.warn(msg)
             return False
-
-        # NOTE(jaypipes): We used to only have CPU monitors, so
-        # CONF.compute_monitors could contain "virt_driver" without any monitor
-        # type namespace. So, to maintain backwards-compatibility with that
-        # older way of specifying monitors, we first loop through any values in
-        # CONF.compute_monitors and put any non-namespace'd values into the
-        # 'cpu' namespace.
-        cfg_monitors = ['cpu.' + cfg if '.' not in cfg else cfg
-                        for cfg in CONF.compute_monitors]
-        # NOTE(jaypipes): Append 'nova.compute.monitors.' to any monitor value
-        # that doesn't have it to allow CONF.compute_monitors to use shortened
-        # namespaces (like 'cpu.' instead of 'nova.compute.monitors.cpu.')
-        cfg_monitors = ['nova.compute.monitors.' + cfg
-                        if 'nova.compute.monitors.' not in cfg else cfg
-                        for cfg in cfg_monitors]
-        if namespace + '.' + ext.name in cfg_monitors:
+        if monitor_type in self.conf_monitors:
             self.type_monitor_loaded[namespace] = ext.name
             return True
-        LOG.warning(_LW("Excluding %(namespace)s monitor %(monitor_name)s. "
-                        "Not in the list of enabled monitors "
-                        "(CONF.compute_monitors)."),
-                    {'namespace': namespace, 'monitor_name': ext.name})
+        msg = _LW("Excluding %(namespace)s monitor %(monitor_name)s. "
+                  "Not in the list of enabled monitors "
+                  "(CONF.compute_monitors).")
+        msg = msg % {
+            'namespace': namespace,
+            'monitor_name': ext.name,
+        }
+        LOG.warn(msg)
         return False

@@ -475,6 +475,9 @@ class MonitorMetricType(Enum):
         super(MonitorMetricType, self).__init__(
             valid_values=MonitorMetricType.ALL)
 
+    def coerce(self, obj, attr, value):
+        return super(Enum, self).coerce(obj, attr, value)
+
 
 class HostStatus(Enum):
 
