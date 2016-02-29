@@ -38,6 +38,7 @@ import shutil
 import tempfile
 import time
 import uuid
+import platform
 
 import eventlet
 from eventlet import greenthread
@@ -5046,7 +5047,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return instance_caps
 
-    def _get_cpu_info(self):
+    def _get_libvirt_cpu_info(self):
         """Get cpuinfo information.
 
         Obtains cpu feature from virConnect.getCapabilities.
@@ -5074,6 +5075,47 @@ class LibvirtDriver(driver.ComputeDriver):
             features.add(f.name)
         cpu_info['features'] = features
         return cpu_info
+
+    def _get_cpu_info(self):
+        cpuinfo = self._parse_lscpu_info()
+        cpu_info = dict()
+        cpu_info['arch'] = platform.uname()[5]
+        cpu_info['model'] = cpuinfo.get('model name', 'unknown')
+        cpu_info['vendor'] = cpuinfo.get('vendor id', 'unknown')
+        topology = dict()
+        topology['sockets'] = cpuinfo.get('socket(s)', 1)
+        topology['cores'] = cpuinfo.get('core(s) per socket', 1)
+        topology['threads'] = cpuinfo.get('thread(s) per core', 1)
+        cpu_info['topology'] = topology
+        cpu_info['features'] = cpuinfo.get('flags', 'unknown')
+        LOG.info( cpu_info )
+        return cpu_info
+ 
+    def _parse_lscpu_info(self):
+        '''Parse the output of lscpu.'''
+        cpuinfo = {}
+        out, err = utils.execute('lscpu')
+        if err:
+            msg = _('Unable to parse lscpu output.')
+            raise exception.NovaException(msg)
+
+        cpu = [line.strip('\n') for line in out.splitlines()]
+        for line in cpu:
+            if line.strip():
+                name, value = line.split(':', 1)
+                name = name.strip().lower()
+                cpuinfo[name] = value.strip()
+
+        f = open('/proc/cpuinfo', 'r')
+        features = [line.strip('\n') for line in f.readlines()]
+        for line in features:
+            if line.strip():
+                if line.startswith('flags'):
+                    name, value = line.split(':', 1)
+                    name = name.strip().lower()
+                    cpuinfo[name] = value.strip()
+
+        return cpuinfo
 
     def _get_pcidev_info(self, devname):
         """Returns a dict of PCI device."""

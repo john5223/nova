@@ -47,7 +47,9 @@ class SSDDriver(object):
         for line in ssd[1:]:
             if line.strip():
                 name, value = line.split()
-                ssdinfo[name] = value.strip()
+                rotational = value.strip()
+                ssd = 0 if rotational == '1' else 1
+                ssdinfo[name] = ssd
         return ssdinfo 
         
 
@@ -88,7 +90,7 @@ class Monitor(base.MonitorBase):
             for s in stats:
                 self._data['drive.{0}.ssd'.format(s)] = stats[s]
             self._ssd_stats = stats.copy()
-            LOG.debug("SSD Monitor: %s" % self._data)
+            LOG.info("SSD Monitor: %s" % self._data)
         except (NotImplementedError, TypeError, KeyError):
             LOG.exception(_LE("Not all properties needed are implemented "
                               "in the ssd driver"))

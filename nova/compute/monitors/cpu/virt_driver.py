@@ -29,6 +29,7 @@ CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
+
 class Monitor(base.CPUMonitorBase):
     """CPU monitor that uses the virt driver's get_host_cpu_stats() call."""
 
