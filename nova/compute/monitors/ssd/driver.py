@@ -69,6 +69,11 @@ class Monitor(base.MonitorBase):
         metrics = [x for x in self._data if x != 'timestamp']
         return metrics
 
+    def get_metrics(self):
+	self._update_data()
+	timestamp = self._data['timestamp']
+        return [(k, v, timestamp) for k,v in self._data.items() if k != 'timestamp']
+
     def get_metric(self, name):
         self._update_data()
         return self._data[name], self._data["timestamp"]
