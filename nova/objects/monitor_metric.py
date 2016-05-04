@@ -112,3 +112,7 @@ class MonitorMetricList(base.ObjectListBase, base.NovaObject):
     # format expected by the RPC notifier for metrics events.
     def to_list(self):
         return [m.to_dict() for m in self.objects]
+
+    @property
+    def stats(self):
+        return {m['name']: m['value'] for m in self.to_list()}
