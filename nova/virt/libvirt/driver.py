@@ -5102,7 +5102,7 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu_info['features'] = cpuinfo.get('flags', 'unknown')
         LOG.info( cpu_info )
         return cpu_info
- 
+
     def _parse_lscpu_info(self):
         '''Parse the output of lscpu.'''
         cpuinfo = {}

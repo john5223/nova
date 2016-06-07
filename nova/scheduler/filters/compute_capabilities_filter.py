@@ -74,6 +74,8 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
         for key, req in six.iteritems(instance_type.extra_specs):
             # Either not scope format, or in capabilities scope
             scope = key.split(':')
+            if scope[0] == 'meta':
+                continue
             if len(scope) > 1:
                 if scope[0] != "capabilities":
                     continue
